@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Squish Party</title>
+    <title>Squish Party - Retro Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
             padding: 8px 15px;
             border: 2px solid #555555;
             font-size: 1em;
-            z-index: 100; white-space: nowrap;
+            z-index: 100; white-space: nowrap; /* Keep nowrap by default */
             text-shadow: 1px 1px 0px #008000;
         }
 
@@ -156,9 +156,20 @@
         .animation-shake { animation: shake 0.3s steps(2, end) infinite; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-1deg); } 75% { transform: translateX(2px) rotate(1deg); } }
 
-        /* Responsive Adjustments */
+        /* --- UPDATED Responsive Adjustments --- */
         @media (max-width: 600px) {
-            #hud { font-size: 0.8em; gap: 8px; padding: 5px 8px; }
+            #hud {
+                font-size: 0.8em;
+                gap: 8px;                /* Vertical and horizontal gap */
+                padding: 5px 10px;       /* Padding */
+                /* --- Additions for Wrapping --- */
+                white-space: normal;     /* Allow text wrapping within items if needed */
+                flex-wrap: wrap;         /* Allow HUD items to wrap */
+                justify-content: center; /* Center items horizontally */
+                width: 90%;              /* Constrain width slightly */
+                max-width: 300px;        /* Optional: Prevent it getting too wide if wrapping */
+                /* left: 50%; transform: translateX(-50%); */ /* This centering still works */
+            }
             .screen h1 { font-size: 1.8em; }
             .screen p { font-size: 1.0em; }
             .screen p.warning { font-size: 0.8em; padding: 8px 10px; }
@@ -224,9 +235,8 @@
         const TOP_SAFE_ZONE = 60; const INITIAL_SPAWN_DELAY = 750; const MEDIUM_SPAWN_DELAY = 500; const FAST_SPAWN_DELAY = 350;
 
         // Emojis
-        // <<< UPDATED animalEmojis array >>>
         const animalEmojis = ['🐍', '🐸', '🐟', '🦟', '🐰', '🐿️', '🦎', '🦫', '🦋', '🐜', '🐛', '🐇', '🦝', '🦆', '🐢', '🦨', '🦦'];
-        const goldenCrownEmoji = '👑'; const insectEmojis = ['🦟', '🦋', '🐜', '🐛']; // Insect list remains the same
+        const goldenCrownEmoji = '👑'; const insectEmojis = ['🦟', '🦋', '🐜', '🐛'];
         const emojiBehaviors = ['normal', 'fast', 'hider', 'jumper'];
         const idleAnimations = ['none', 'bounce-wiggle', 'float-sway', 'pulse', 'shake'];
 
@@ -315,16 +325,14 @@
                 emojiChar = goldenCrownEmoji; emojiElement.classList.add('golden-crown');
                 points = 5; isGolden = true; emojiElement.style.fontSize = '45px';
             } else {
-                // Get random emoji from the updated list
                 emojiChar = getRandomElement(animalEmojis);
-                // Check if it's an insect using the insectEmojis list
                 isInsect = insectEmojis.includes(emojiChar);
                 if (isInsect) {
-                     points = -10; // Using score reset logic anyway
+                     points = -10;
                      emojiElement.style.fontSize = `${getRandomInt(30, 45)}px`;
-                     emojiElement.classList.add('insect'); // Make sure insect class is added
+                     emojiElement.classList.add('insect');
                  } else {
-                     points = 1; // All non-insects worth 1 point
+                     points = 1;
                      emojiElement.style.fontSize = `${getRandomInt(35, 55)}px`;
                  }
                  if (!isGolden) {
