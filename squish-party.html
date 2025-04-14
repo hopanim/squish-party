@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Squish Party</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* === RETRO STYLES START === */
+
+        /* Basic Reset & Body Styling */
+        * {
+            box-sizing: border-box; margin: 0; padding: 0;
+            font-family: 'Press Start 2P', monospace;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            image-rendering: pixelated;
+        }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background-color: #000000;
+        }
+
+        /* Optional: Scanline Overlay */
+        body::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100% 3px;
+            pointer-events: none; z-index: 500; opacity: 0.5;
+        }
+
+        /* Game Container */
+        #game-container {
+            position: relative; width: 100%; height: 100%;
+            cursor: crosshair; overflow: hidden;
+            touch-action: none; -webkit-user-select: none; -ms-user-select: none; user-select: none;
+            background-color: #000000; /* Default Black background - JS will change it */
+        }
+
+        /* Heads-Up Display (HUD) */
+        #hud {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex;
+            gap: 15px;
+            background-color: #222222;
+            color: #00ff00;
+            padding: 8px 15px;
+            border: 2px solid #555555;
+            font-size: 1em;
+            z-index: 100; white-space: nowrap;
+            text-shadow: 1px 1px 0px #008000;
+        }
+
+        /* Screens (Start/Game Over) */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background-color: #000000;
+            color: #ffffff;
+            text-align: center; z-index: 200; padding: 20px;
+            border: 5px solid #555;
+            box-shadow: 6px 6px 0px #333333;
+        }
+        .screen h1 {
+            font-size: 2.5em;
+            margin-bottom: 25px;
+            color: #ffff00;
+            text-shadow: 3px 3px 0px #ff8c00;
+        }
+        .screen p {
+            font-size: 1.2em;
+            margin-bottom: 18px;
+            color: #00ffff;
+            line-height: 1.5;
+        }
+        .screen p.warning {
+            font-size: 0.9em;
+            background-color: #ffffff; /* White background */
+            color: #ff0000;           /* Bright Red text for contrast */
+            padding: 10px 15px;       /* Padding inside the white box */
+            border: 2px solid #ff0000; /* Optional: Red border matching text */
+            margin-top: 10px;          /* Adjusted margin */
+            margin-bottom: 25px;
+            max-width: 90%;
+            line-height: 1.6;
+        }
+        .screen button {
+            padding: 12px 25px;
+            font-size: 1.3em;
+            cursor: pointer;
+            background-color: #0000ff;
+            color: white;
+            border: 2px solid #ffffff;
+            box-shadow: 4px 4px 0px #00008b;
+        }
+        .screen button:hover {
+            background-color: #4444ff;
+            color: #ffff00;
+        }
+        #game-over-screen { display: none; }
+        #game-over-screen p.stats { margin-bottom: 10px; font-size: 1.2em; color: #00ff00; }
+        #game-over-screen p.squish-counts { font-size: 1.0em; color: #cccccc; margin-bottom: 8px; }
+
+        /* Emoji Styling */
+        .emoji {
+            position: absolute; font-size: 40px; cursor: pointer; user-select: none; will-change: transform, opacity;
+            transition: transform 0.05s ease-out, opacity 0.05s ease-out;
+            display: inline-block;
+        }
+        .emoji.squished { transform: scale(0.1) rotate(90deg); opacity: 0; }
+        .emoji.insect { /* Optional styling */ }
+        .golden-crown { filter: drop-shadow(0 0 5px gold); animation: shimmer 0.5s steps(2, end) infinite alternate; }
+        @keyframes shimmer { 0% { filter: drop-shadow(0 0 5px gold) brightness(1); } 100% { filter: drop-shadow(0 0 10px gold) brightness(1.5); } }
+
+        /* Pop Effect Feedback */
+        .pop-effect {
+            position: absolute; width: 50px; height: 50px;
+            pointer-events: none; z-index: 50;
+            animation: pop-animation 0.2s steps(4, end) forwards;
+            transform: translate(-50%, -50%); opacity: 0.9;
+            border: 3px solid;
+        }
+        .pop-effect.hit { background-color: rgba(0, 255, 0, 0.7); border-color: #008000; }
+        .pop-effect.miss { background-color: rgba(255, 0, 0, 0.7); border-color: #8b0000; }
+        @keyframes pop-animation { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; } 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } }
+
+        /* Score, Penalty & Reset Text Feedback */
+        .feedback-text {
+            position: absolute; font-size: 1.3em;
+            font-weight: normal;
+            pointer-events: none; z-index: 60;
+            animation: feedback-text-animation 0.6s linear forwards;
+            transform: translateX(-50%);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.7);
+        }
+        .feedback-text.score-popup { color: #00ff00; }
+        .feedback-text.penalty-popup { color: #ff0000; }
+        .feedback-text.insect-reset-popup { color: #ff00ff; font-size: 1.5em; }
+        @keyframes feedback-text-animation { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -40px); opacity: 0; } }
+
+        /* Emoji Behaviors & Animations */
+        .behavior-fast { animation: moveAcross 2s linear infinite alternate; }
+        @keyframes moveAcross { 0% { transform: translateX(-20px) translateY(5px) rotate(-5deg); } 100% { transform: translateX(20px) translateY(-5px) rotate(5deg); } }
+        .behavior-hider { animation: fadeInOut 1.5s steps(4, end) forwards; }
+        @keyframes fadeInOut { 0%, 100% { opacity: 0; } 10%, 90% { opacity: 1; } }
+        .behavior-jumper { animation: jump 0.6s steps(2, end) infinite; }
+        @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px) rotate(5deg); } }
+        .animation-bounce-wiggle { animation: bounce-wiggle 1.2s ease-in-out infinite; }
+        @keyframes bounce-wiggle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(3deg); } 75% { transform: translateY(2px) rotate(-2deg); } }
+        .animation-float-sway { animation: float-sway 2s ease-in-out infinite alternate; }
+        @keyframes float-sway { 0% { transform: translateY(-3px) rotate(-4deg); } 100% { transform: translateY(3px) rotate(4deg); } }
+        .animation-pulse { animation: pulse 1s steps(2, end) infinite alternate; }
+        @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+        .animation-shake { animation: shake 0.3s steps(2, end) infinite; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-1deg); } 75% { transform: translateX(2px) rotate(1deg); } }
+
+        /* Responsive Adjustments */
+        @media (max-width: 600px) {
+            #hud { font-size: 0.8em; gap: 8px; padding: 5px 8px; }
+            .screen h1 { font-size: 1.8em; }
+            .screen p { font-size: 1.0em; }
+            .screen p.warning { font-size: 0.8em; padding: 8px 10px; }
+            #game-over-screen p.stats { font-size: 1.0em; }
+            #game-over-screen p.squish-counts { font-size: 0.9em; }
+            .screen button { padding: 10px 20px; font-size: 1.1em; }
+            .pop-effect { width: 40px; height: 40px; }
+            .feedback-text { font-size: 1.0em; }
+            .feedback-text.insect-reset-popup { font-size: 1.2em; }
+            .emoji { font-size: 30px; }
+            .emoji.golden-crown { font-size: 35px; }
+        }
+        /* === RETRO STYLES END === */
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud" style="display: none;">
+            <span>Score: <span id="score">0</span></span>
+            <span>Accuracy: <span id="accuracy">100%</span></span>
+            <span>Time: <span id="timer">15</span></span>
+        </div>
+        <div id="start-screen" class="screen">
+            <h1>Squish Party</h1>
+            <p>Tap the animals, don't miss!</p>
+            <p class="warning">Careful: Squishing insects ( 🦟 🦋 🐜 🐛 ) resets your score!</p>
+            <button id="start-button">Start Game</button>
+        </div>
+        <div id="game-over-screen" class="screen">
+            <h1>Game Over!</h1>
+            <p id="final-message">You squished X creatures!</p>
+            <p class="squish-counts">Animals Squished: <span id="animals-squished">0</span></p>
+            <p class="squish-counts" style="margin-bottom: 15px;">Insects Squished: <span id="insects-squished">0</span></p>
+            <p class="stats"><strong>Final Score: <span id="final-score">0</span></strong></p>
+            <p class="squish-counts">Accuracy: <span id="final-accuracy">--%</span></p>
+            <p class="squish-counts">High Score: <span id="high-score">0</span></p>
+            <button id="play-again-button">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameContainer = document.getElementById('game-container');
+        const hud = document.getElementById('hud');
+        const scoreDisplay = document.getElementById('score');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const timerDisplay = document.getElementById('timer');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const playAgainButton = document.getElementById('play-again-button');
+        const finalMessage = document.getElementById('final-message');
+        const highScoreDisplay = document.getElementById('high-score');
+        const finalAccuracyDisplay = document.getElementById('final-accuracy');
+        const animalsSquishedDisplay = document.getElementById('animals-squished');
+        const insectsSquishedDisplay = document.getElementById('insects-squished');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        // Game Settings & State
+        const GAME_DURATION = 15; const GOLDEN_CROWN_CHANCE = 0.05; const HIDER_DESPAWN_TIME = 1200;
+        const HIGH_SCORE_KEY = 'squishPartyHighScore'; const MISS_PENALTY = 1; const INSECT_FLASH_DURATION = 50;
+        const TOP_SAFE_ZONE = 60; const INITIAL_SPAWN_DELAY = 750; const MEDIUM_SPAWN_DELAY = 500; const FAST_SPAWN_DELAY = 350;
+
+        // Emojis
+        // <<< UPDATED animalEmojis array >>>
+        const animalEmojis = ['🐍', '🐸', '🐟', '🦟', '🐰', '🐿️', '🦎', '🦫', '🦋', '🐜', '🐛', '🐇', '🦝', '🦆', '🐢', '🦨', '🦦'];
+        const goldenCrownEmoji = '👑'; const insectEmojis = ['🦟', '🦋', '🐜', '🐛']; // Insect list remains the same
+        const emojiBehaviors = ['normal', 'fast', 'hider', 'jumper'];
+        const idleAnimations = ['none', 'bounce-wiggle', 'float-sway', 'pulse', 'shake'];
+
+        // Game State Variables
+        let score = 0; let misses = 0; let totalClicks = 0; let animalsSquished = 0; let insectsSquished = 0;
+        let timer = GAME_DURATION; let gameInterval = null; let spawnInterval = null;
+        let difficultyTimeout1 = null; let difficultyTimeout2 = null;
+        let highScore = 0; let isGameOver = true; let activeEmojis = new Set();
+
+        // --- Helper Functions ---
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        function updateHUD() { scoreDisplay.textContent = score; timerDisplay.textContent = timer; accuracyDisplay.textContent = calculateAccuracy(); }
+        function calculateAccuracy() { if (totalClicks === 0) return '100%'; const accuracy = Math.round(((totalClicks - misses) / totalClicks) * 100); return `${accuracy}%`; }
+        function saveHighScore() { if (score > highScore) { highScore = score; localStorage.setItem(HIGH_SCORE_KEY, highScore); } highScoreDisplay.textContent = highScore; }
+        function loadHighScore() { const savedScore = localStorage.getItem(HIGH_SCORE_KEY); highScore = savedScore ? parseInt(savedScore, 10) : 0; highScoreDisplay.textContent = highScore; }
+        function createFeedback(type, x, y, textContent = null) {
+            const pop = document.createElement('div');
+            pop.classList.add('pop-effect', type === 'insect' ? 'miss' : type);
+            pop.style.left = `${x}px`; pop.style.top = `${y}px`;
+            gameContainer.appendChild(pop);
+            setTimeout(() => pop.remove(), 200);
+            if (textContent) {
+                const feedbackText = document.createElement('div');
+                feedbackText.classList.add('feedback-text');
+                feedbackText.style.left = `${x}px`; feedbackText.style.top = `${y - 20}px`;
+                feedbackText.textContent = textContent;
+                if (type === 'hit') feedbackText.classList.add('score-popup');
+                else if (type === 'miss') feedbackText.classList.add('penalty-popup');
+                else if (type === 'insect') feedbackText.classList.add('insect-reset-popup');
+                gameContainer.appendChild(feedbackText);
+                setTimeout(() => feedbackText.remove(), 600);
+            }
+        }
+        function triggerInsectFlash() {
+             const originalColor = gameContainer.style.backgroundColor;
+             gameContainer.style.backgroundColor = 'rgba(255, 150, 150, 0.8)';
+             setTimeout(() => {
+                 if (!isGameOver && gameContainer.style.backgroundColor !== '#000000') {
+                     gameContainer.style.backgroundColor = originalColor;
+                 }
+             }, INSECT_FLASH_DURATION);
+        }
+        function changeSpawnRate(newDelay) { if (isGameOver) return; clearInterval(spawnInterval); spawnInterval = setInterval(spawnEmoji, newDelay); }
+
+        // --- Core Game Logic ---
+        function startGame() {
+            score = 0; misses = 0; totalClicks = 0; animalsSquished = 0; insectsSquished = 0;
+            timer = GAME_DURATION; isGameOver = false;
+            activeEmojis.forEach(emoji => emoji.remove()); activeEmojis.clear();
+            clearTimeout(difficultyTimeout1); clearTimeout(difficultyTimeout2);
+            startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
+            gameContainer.style.backgroundColor = '#ffffff'; // Set background to white
+            hud.style.display = 'flex'; updateHUD();
+            gameInterval = setInterval(tick, 1000);
+            spawnInterval = setInterval(spawnEmoji, INITIAL_SPAWN_DELAY);
+            difficultyTimeout1 = setTimeout(() => { if (!isGameOver) changeSpawnRate(MEDIUM_SPAWN_DELAY); }, 5000);
+            difficultyTimeout2 = setTimeout(() => { if (!isGameOver) changeSpawnRate(FAST_SPAWN_DELAY); }, 10000);
+            gameContainer.addEventListener('pointerdown', handleMiss);
+        }
+
+        function endGame() {
+            isGameOver = true; clearInterval(gameInterval); clearInterval(spawnInterval);
+            clearTimeout(difficultyTimeout1); clearTimeout(difficultyTimeout2);
+            gameContainer.removeEventListener('pointerdown', handleMiss);
+            activeEmojis.forEach(emoji => emoji.remove()); activeEmojis.clear();
+            gameContainer.style.backgroundColor = '#000000'; // Revert background to black
+            const totalSquished = animalsSquished + insectsSquished;
+            finalMessage.textContent = `You squished ${totalSquished} creatures!`;
+            animalsSquishedDisplay.textContent = animalsSquished;
+            insectsSquishedDisplay.textContent = insectsSquished;
+            saveHighScore();
+            finalAccuracyDisplay.textContent = calculateAccuracy();
+            finalScoreDisplay.textContent = score;
+            hud.style.display = 'none'; gameOverScreen.style.display = 'flex';
+        }
+
+        function tick() { timer--; updateHUD(); if (timer <= 0) endGame(); }
+
+        function spawnEmoji() {
+            if (isGameOver) return;
+            const emojiElement = document.createElement('div');
+            emojiElement.classList.add('emoji');
+            let points = 1; let emojiChar = ''; let isGolden = false; let isHider = false; let isInsect = false;
+            if (Math.random() < GOLDEN_CROWN_CHANCE) {
+                emojiChar = goldenCrownEmoji; emojiElement.classList.add('golden-crown');
+                points = 5; isGolden = true; emojiElement.style.fontSize = '45px';
+            } else {
+                // Get random emoji from the updated list
+                emojiChar = getRandomElement(animalEmojis);
+                // Check if it's an insect using the insectEmojis list
+                isInsect = insectEmojis.includes(emojiChar);
+                if (isInsect) {
+                     points = -10; // Using score reset logic anyway
+                     emojiElement.style.fontSize = `${getRandomInt(30, 45)}px`;
+                     emojiElement.classList.add('insect'); // Make sure insect class is added
+                 } else {
+                     points = 1; // All non-insects worth 1 point
+                     emojiElement.style.fontSize = `${getRandomInt(35, 55)}px`;
+                 }
+                 if (!isGolden) {
+                    const behavior = getRandomElement(emojiBehaviors);
+                    if (behavior !== 'normal') { emojiElement.classList.add(`behavior-${behavior}`); if (behavior === 'hider') isHider = true; }
+                    if (behavior !== 'fast' && behavior !== 'jumper') {
+                        const animation = getRandomElement(idleAnimations);
+                        if (animation !== 'none') { emojiElement.classList.add(`animation-${animation}`); emojiElement.style.animationDelay = `${Math.random() * 0.5}s`; }
+                    }
+                }
+            }
+            emojiElement.textContent = emojiChar; emojiElement.dataset.points = points; emojiElement.dataset.isInsect = isInsect;
+            const gameRect = gameContainer.getBoundingClientRect();
+            const maxX = gameRect.width - 70; const maxY = gameRect.height - 70;
+            emojiElement.style.left = `${getRandomInt(10, maxX)}px`; emojiElement.style.top = `${getRandomInt(TOP_SAFE_ZONE, maxY)}px`;
+            emojiElement.addEventListener('pointerdown', handleEmojiClick);
+            gameContainer.appendChild(emojiElement); activeEmojis.add(emojiElement);
+            if (isHider) { setTimeout(() => { if (activeEmojis.has(emojiElement)) { emojiElement.style.opacity = '0'; setTimeout(() => { if (activeEmojis.has(emojiElement)) { activeEmojis.delete(emojiElement); emojiElement.remove(); } }, 300); } }, HIDER_DESPAWN_TIME); }
+        }
+
+        function handleEmojiClick(event) {
+            event.stopPropagation(); if (isGameOver) return;
+            const clickedEmoji = event.target.closest('.emoji');
+            if (!clickedEmoji || !activeEmojis.has(clickedEmoji)) return;
+            const points = parseInt(clickedEmoji.dataset.points, 10);
+            const isInsect = clickedEmoji.dataset.isInsect === 'true';
+            totalClicks++;
+            const rect = clickedEmoji.getBoundingClientRect();
+            const clickX = rect.left + rect.width / 2; const clickY = rect.top + rect.height / 2;
+            if (isInsect) {
+                 score = 0;
+                 insectsSquished++; triggerInsectFlash(); createFeedback('insect', clickX, clickY, "RESET!");
+            } else {
+                score += points; animalsSquished++; createFeedback('hit', clickX, clickY, `+${points}`);
+            }
+            clickedEmoji.classList.add('squished'); clickedEmoji.style.pointerEvents = 'none';
+            activeEmojis.delete(clickedEmoji); setTimeout(() => clickedEmoji.remove(), 50);
+            updateHUD();
+        }
+
+        function handleMiss(event) {
+            if (event.target.closest('.emoji') && activeEmojis.has(event.target.closest('.emoji'))) return;
+            if (isGameOver) return; if (event.target.closest('#hud') || event.target.closest('.screen')) return;
+            misses++; totalClicks++; score = Math.max(0, score - MISS_PENALTY);
+            createFeedback('miss', event.clientX, event.clientY, `-${MISS_PENALTY}`);
+            updateHUD();
+        }
+
+        // --- Initialization ---
+        startButton.addEventListener('click', startGame);
+        playAgainButton.addEventListener('click', startGame);
+        window.addEventListener('load', () => { loadHighScore(); startScreen.style.display = 'flex'; gameOverScreen.style.display = 'none'; hud.style.display = 'none'; gameContainer.style.backgroundColor = '#000000'; });
+
+    </script>
+
+</body>
+</html>
