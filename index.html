@@ -53,7 +53,7 @@
             text-shadow: 1px 1px 0px #008000;
         }
 
-        /* Screens (Start/Game Over) */
+        /* Screens (Start/Game Over/Apex) */
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column;
             justify-content: center; align-items: center;
@@ -78,10 +78,10 @@
         .screen p.warning {
             font-size: 0.9em;
             background-color: #ffffff; /* White background */
-            color: #ff0000;           /* Bright Red text for contrast */
-            padding: 10px 15px;       /* Padding inside the white box */
+            color: #ff0000;          /* Bright Red text for contrast */
+            padding: 10px 15px;      /* Padding inside the white box */
             border: 2px solid #ff0000; /* Optional: Red border matching text */
-            margin-top: 10px;          /* Adjusted margin */
+            margin-top: 10px;        /* Adjusted margin */
             margin-bottom: 25px;
             max-width: 90%;
             line-height: 1.6;
@@ -102,6 +102,49 @@
         #game-over-screen { display: none; }
         #game-over-screen p.stats { margin-bottom: 10px; font-size: 1.2em; color: #00ff00; }
         #game-over-screen p.squish-counts { font-size: 1.0em; color: #cccccc; margin-bottom: 8px; }
+
+        /* --- Apex Predator Screen Styles --- */
+        #apex-predator-screen {
+            display: none; /* Hidden by default */
+            /* Flashing background animation */
+            animation: flashBackground 0.5s infinite alternate;
+            /* Flashing border animation */
+            border-style: solid;
+            border-width: 10px; /* Make border thicker */
+            animation: flashBorder 0.3s infinite steps(1, end);
+        }
+        #apex-predator-screen h1 {
+            font-size: 2.2em; /* Slightly smaller to fit */
+            color: #FFD700; /* Gold color */
+            text-shadow: 3px 3px 0px #FF6347; /* Tomato shadow */
+            margin-bottom: 30px;
+        }
+        #apex-shark {
+            font-size: 120px; /* Giant shark */
+            display: block;
+            margin-bottom: 30px;
+            animation: sharkWiggle 1s ease-in-out infinite alternate;
+        }
+        @keyframes flashBackground {
+            0% { background-color: #ff0000; } /* Red */
+            25% { background-color: #00ff00; } /* Lime */
+            50% { background-color: #0000ff; } /* Blue */
+            75% { background-color: #ffff00; } /* Yellow */
+            100% { background-color: #ff00ff; } /* Magenta */
+        }
+        @keyframes flashBorder {
+            0% { border-color: #ffffff; } /* White */
+            20% { border-color: #00ffff; } /* Cyan */
+            40% { border-color: #ffA500; } /* Orange */
+            60% { border-color: #800080; } /* Purple */
+            80% { border-color: #008000; } /* Green */
+            100% { border-color: #ff1493; } /* Deep Pink */
+        }
+        @keyframes sharkWiggle {
+             0% { transform: rotate(-3deg) scale(1); }
+             100% { transform: rotate(3deg) scale(1.05); }
+        }
+        /* --- END: Apex Predator Screen Styles --- */
 
         /* Emoji Styling */
         .emoji {
@@ -156,19 +199,18 @@
         .animation-shake { animation: shake 0.3s steps(2, end) infinite; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-1deg); } 75% { transform: translateX(2px) rotate(1deg); } }
 
-        /* --- UPDATED Responsive Adjustments --- */
+        /* --- Responsive Adjustments --- */
         @media (max-width: 600px) {
             #hud {
                 font-size: 0.8em;
-                gap: 8px;                /* Vertical and horizontal gap */
-                padding: 5px 10px;       /* Padding */
+                gap: 8px;             /* Vertical and horizontal gap */
+                padding: 5px 10px;    /* Padding */
                 /* --- Additions for Wrapping --- */
-                white-space: normal;     /* Allow text wrapping within items if needed */
-                flex-wrap: wrap;         /* Allow HUD items to wrap */
+                white-space: normal;    /* Allow text wrapping within items if needed */
+                flex-wrap: wrap;        /* Allow HUD items to wrap */
                 justify-content: center; /* Center items horizontally */
-                width: 90%;              /* Constrain width slightly */
-                max-width: 300px;        /* Optional: Prevent it getting too wide if wrapping */
-                /* left: 50%; transform: translateX(-50%); */ /* This centering still works */
+                width: 90%;             /* Constrain width slightly */
+                max-width: 300px;       /* Optional: Prevent it getting too wide if wrapping */
             }
             .screen h1 { font-size: 1.8em; }
             .screen p { font-size: 1.0em; }
@@ -181,6 +223,11 @@
             .feedback-text.insect-reset-popup { font-size: 1.2em; }
             .emoji { font-size: 30px; }
             .emoji.golden-crown { font-size: 35px; }
+
+            /* --- Apex Responsive Adjustments --- */
+            #apex-predator-screen h1 { font-size: 1.5em; }
+            #apex-shark { font-size: 80px; }
+            /* --- END: Apex Responsive Adjustments --- */
         }
         /* === RETRO STYLES END === */
     </style>
@@ -209,7 +256,13 @@
             <p class="squish-counts">High Score: <span id="high-score">0</span></p>
             <button id="play-again-button">Play Again</button>
         </div>
-    </div>
+
+        <div id="apex-predator-screen" class="screen">
+            <h1>You're an APEX PREDATOR!!</h1>
+            <span id="apex-shark">🦈</span>
+            <button id="apex-play-again-button">Play Again</button>
+        </div>
+        </div>
 
     <script>
         // DOM Elements
@@ -228,165 +281,346 @@
         const animalsSquishedDisplay = document.getElementById('animals-squished');
         const insectsSquishedDisplay = document.getElementById('insects-squished');
         const finalScoreDisplay = document.getElementById('final-score');
+        // Apex Predator Screen Elements
+        const apexPredatorScreen = document.getElementById('apex-predator-screen');
+        const apexPlayAgainButton = document.getElementById('apex-play-again-button');
 
         // Game Settings & State
-        const GAME_DURATION = 15; const GOLDEN_CROWN_CHANCE = 0.05; const HIDER_DESPAWN_TIME = 1200;
-        const HIGH_SCORE_KEY = 'squishPartyHighScore'; const MISS_PENALTY = 1; const INSECT_FLASH_DURATION = 50;
-        const TOP_SAFE_ZONE = 60; const INITIAL_SPAWN_DELAY = 750; const MEDIUM_SPAWN_DELAY = 500; const FAST_SPAWN_DELAY = 350;
+        const GAME_DURATION = 15; // Duration of the game in seconds
+        const GOLDEN_CROWN_CHANCE = 0.05; // Chance of spawning a golden crown (5%)
+        const HIDER_DESPAWN_TIME = 1200; // Time in ms before a 'hider' emoji despawns
+        const HIGH_SCORE_KEY = 'squishPartyHighScore'; // Key for storing high score in localStorage
+        const MISS_PENALTY = 1; // Points deducted for a miss
+        const INSECT_FLASH_DURATION = 50; // Duration of the red flash when an insect is squished (ms)
+        const TOP_SAFE_ZONE = 60; // Pixels from the top where emojis won't spawn (to avoid HUD)
+        const INITIAL_SPAWN_DELAY = 750; // Initial delay between spawns (ms)
+        const MEDIUM_SPAWN_DELAY = 500; // Spawn delay after 5 seconds (ms)
+        const FAST_SPAWN_DELAY = 350; // Spawn delay after 10 seconds (ms)
+        // --- UPDATED: Apex trigger thresholds ---
+        const APEX_INSECT_THRESHOLD = 3; // Now requires 3 insects
+        const APEX_ANIMAL_THRESHOLD = 5; // Now requires 5 animals
 
         // Emojis
         const animalEmojis = ['🐍', '🐸', '🐟', '🦟', '🐰', '🐿️', '🦎', '🦫', '🦋', '🐜', '🐛', '🐇', '🦝', '🦆', '🐢', '🦨', '🦦'];
-        const goldenCrownEmoji = '👑'; const insectEmojis = ['🦟', '🦋', '🐜', '🐛'];
-        const emojiBehaviors = ['normal', 'fast', 'hider', 'jumper'];
-        const idleAnimations = ['none', 'bounce-wiggle', 'float-sway', 'pulse', 'shake'];
+        const goldenCrownEmoji = '👑';
+        const insectEmojis = ['🦟', '🦋', '🐜', '🐛']; // Emojis classified as insects
+        const emojiBehaviors = ['normal', 'fast', 'hider', 'jumper']; // Movement behaviors
+        const idleAnimations = ['none', 'bounce-wiggle', 'float-sway', 'pulse', 'shake']; // Idle CSS animations
 
         // Game State Variables
-        let score = 0; let misses = 0; let totalClicks = 0; let animalsSquished = 0; let insectsSquished = 0;
-        let timer = GAME_DURATION; let gameInterval = null; let spawnInterval = null;
-        let difficultyTimeout1 = null; let difficultyTimeout2 = null;
-        let highScore = 0; let isGameOver = true; let activeEmojis = new Set();
+        let score = 0; // Current score
+        let misses = 0; // Number of missed clicks
+        let totalClicks = 0; // Total clicks made (for accuracy)
+        let animalsSquished = 0; // Count of non-insect animals squished
+        let insectsSquished = 0; // Count of insects squished
+        let timer = GAME_DURATION; // Game timer countdown
+        let gameInterval = null; // Interval ID for the main game timer tick
+        let spawnInterval = null; // Interval ID for spawning emojis
+        let difficultyTimeout1 = null; // Timeout ID for the first difficulty increase
+        let difficultyTimeout2 = null; // Timeout ID for the second difficulty increase
+        let highScore = 0; // Highest score achieved
+        let isGameOver = true; // Flag indicating if the game is currently over
+        let activeEmojis = new Set(); // Set to keep track of currently visible emojis
+        let totalSpawnedCreatures = 0; // Counter for total creatures spawned in a round
+
 
         // --- Helper Functions ---
+        // Returns a random integer between min and max (inclusive)
         function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        // Returns a random element from an array
         function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        // Updates the Heads-Up Display (Score, Timer, Accuracy)
         function updateHUD() { scoreDisplay.textContent = score; timerDisplay.textContent = timer; accuracyDisplay.textContent = calculateAccuracy(); }
+        // Calculates and formats the player's accuracy percentage
         function calculateAccuracy() { if (totalClicks === 0) return '100%'; const accuracy = Math.round(((totalClicks - misses) / totalClicks) * 100); return `${accuracy}%`; }
+        // Saves the high score to localStorage if the current score is higher
         function saveHighScore() { if (score > highScore) { highScore = score; localStorage.setItem(HIGH_SCORE_KEY, highScore); } highScoreDisplay.textContent = highScore; }
+        // Loads the high score from localStorage on page load
         function loadHighScore() { const savedScore = localStorage.getItem(HIGH_SCORE_KEY); highScore = savedScore ? parseInt(savedScore, 10) : 0; highScoreDisplay.textContent = highScore; }
+        // Creates visual feedback (pop effect and optional text) at the click location
         function createFeedback(type, x, y, textContent = null) {
+            // Create the pop effect element
             const pop = document.createElement('div');
-            pop.classList.add('pop-effect', type === 'insect' ? 'miss' : type);
+            pop.classList.add('pop-effect', type === 'insect' ? 'miss' : type); // Use 'miss' style for insect pop
             pop.style.left = `${x}px`; pop.style.top = `${y}px`;
             gameContainer.appendChild(pop);
-            setTimeout(() => pop.remove(), 200);
+            // Remove the pop effect after its animation finishes
+            setTimeout(() => pop.remove(), 200); // Pop duration matches animation
+
+            // Create floating text feedback if textContent is provided
             if (textContent) {
                 const feedbackText = document.createElement('div');
                 feedbackText.classList.add('feedback-text');
-                feedbackText.style.left = `${x}px`; feedbackText.style.top = `${y - 20}px`;
+                feedbackText.style.left = `${x}px`; feedbackText.style.top = `${y - 20}px`; // Position slightly above the click
                 feedbackText.textContent = textContent;
+                // Apply specific class based on feedback type for styling
                 if (type === 'hit') feedbackText.classList.add('score-popup');
                 else if (type === 'miss') feedbackText.classList.add('penalty-popup');
                 else if (type === 'insect') feedbackText.classList.add('insect-reset-popup');
                 gameContainer.appendChild(feedbackText);
-                setTimeout(() => feedbackText.remove(), 600);
+                // Remove the text after its animation finishes
+                setTimeout(() => feedbackText.remove(), 600); // Text duration matches animation
             }
         }
+        // Briefly flashes the game background red when an insect is squished
         function triggerInsectFlash() {
              const originalColor = gameContainer.style.backgroundColor;
-             gameContainer.style.backgroundColor = 'rgba(255, 150, 150, 0.8)';
+             gameContainer.style.backgroundColor = 'rgba(255, 150, 150, 0.8)'; // Light red flash
              setTimeout(() => {
+                 // Only revert if the game hasn't ended and the color wasn't changed back to black already
                  if (!isGameOver && gameContainer.style.backgroundColor !== '#000000') {
-                     gameContainer.style.backgroundColor = originalColor;
+                     gameContainer.style.backgroundColor = originalColor; // Revert to the game's white background
                  }
              }, INSECT_FLASH_DURATION);
         }
+        // Changes the emoji spawn rate by clearing the old interval and starting a new one
         function changeSpawnRate(newDelay) { if (isGameOver) return; clearInterval(spawnInterval); spawnInterval = setInterval(spawnEmoji, newDelay); }
 
         // --- Core Game Logic ---
+        // Initializes and starts a new game round
         function startGame() {
+            // Reset game state variables
             score = 0; misses = 0; totalClicks = 0; animalsSquished = 0; insectsSquished = 0;
             timer = GAME_DURATION; isGameOver = false;
+            totalSpawnedCreatures = 0; // Reset spawned count
+
+            // Clear any existing emojis, timeouts, and intervals from previous games
             activeEmojis.forEach(emoji => emoji.remove()); activeEmojis.clear();
             clearTimeout(difficultyTimeout1); clearTimeout(difficultyTimeout2);
-            startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
-            gameContainer.style.backgroundColor = '#ffffff'; // Set background to white
-            hud.style.display = 'flex'; updateHUD();
-            gameInterval = setInterval(tick, 1000);
-            spawnInterval = setInterval(spawnEmoji, INITIAL_SPAWN_DELAY);
-            difficultyTimeout1 = setTimeout(() => { if (!isGameOver) changeSpawnRate(MEDIUM_SPAWN_DELAY); }, 5000);
-            difficultyTimeout2 = setTimeout(() => { if (!isGameOver) changeSpawnRate(FAST_SPAWN_DELAY); }, 10000);
+            clearInterval(gameInterval); clearInterval(spawnInterval);
+
+            // Set up the UI for the game start
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            apexPredatorScreen.style.display = 'none'; // Ensure apex screen is hidden
+            gameContainer.style.backgroundColor = '#ffffff'; // Set active game background to white
+            hud.style.display = 'flex'; // Show the HUD
+            updateHUD(); // Initialize HUD values
+
+            // Start the main game timer and initial emoji spawning
+            gameInterval = setInterval(tick, 1000); // Timer ticks every second
+            spawnInterval = setInterval(spawnEmoji, INITIAL_SPAWN_DELAY); // Start spawning emojis
+
+            // Schedule difficulty increases (faster spawn rates)
+            difficultyTimeout1 = setTimeout(() => { if (!isGameOver) changeSpawnRate(MEDIUM_SPAWN_DELAY); }, 5000); // Increase speed after 5s
+            difficultyTimeout2 = setTimeout(() => { if (!isGameOver) changeSpawnRate(FAST_SPAWN_DELAY); }, 10000); // Increase speed again after 10s
+
+            // Add the event listener for handling clicks on the game background (misses)
             gameContainer.addEventListener('pointerdown', handleMiss);
         }
 
+        // Ends the current game round and displays the appropriate end screen
         function endGame() {
-            isGameOver = true; clearInterval(gameInterval); clearInterval(spawnInterval);
+            isGameOver = true; // Set the game over flag
+
+            // Stop game loops and timers
+            clearInterval(gameInterval); clearInterval(spawnInterval);
             clearTimeout(difficultyTimeout1); clearTimeout(difficultyTimeout2);
-            gameContainer.removeEventListener('pointerdown', handleMiss);
+            gameContainer.removeEventListener('pointerdown', handleMiss); // Remove miss listener
+
+            // Clear any remaining emojis from the screen and the active set
             activeEmojis.forEach(emoji => emoji.remove()); activeEmojis.clear();
             gameContainer.style.backgroundColor = '#000000'; // Revert background to black
-            const totalSquished = animalsSquished + insectsSquished;
-            finalMessage.textContent = `You squished ${totalSquished} creatures!`;
-            animalsSquishedDisplay.textContent = animalsSquished;
-            insectsSquishedDisplay.textContent = insectsSquished;
-            saveHighScore();
-            finalAccuracyDisplay.textContent = calculateAccuracy();
-            finalScoreDisplay.textContent = score;
-            hud.style.display = 'none'; gameOverScreen.style.display = 'flex';
+            hud.style.display = 'none'; // Hide the HUD
+
+            // --- Check for Apex Predator condition ---
+            // Check if the player squished enough insects AND animals based on the updated thresholds
+            if (insectsSquished >= APEX_INSECT_THRESHOLD && animalsSquished >= APEX_ANIMAL_THRESHOLD) {
+                // Player achieved Apex Predator status!
+                apexPredatorScreen.style.display = 'flex'; // Show the Apex screen
+                gameOverScreen.style.display = 'none'; // Ensure regular game over is hidden
+                saveHighScore(); // Still save high score if applicable
+            } else {
+                // Regular Game Over condition
+                const totalSquished = animalsSquished + insectsSquished; // Calculate total for message
+                finalMessage.textContent = `You squished ${totalSquished} creatures!`;
+                animalsSquishedDisplay.textContent = animalsSquished; // Show animal count
+                insectsSquishedDisplay.textContent = insectsSquished; // Show insect count
+                saveHighScore(); // Update and display high score
+                finalAccuracyDisplay.textContent = calculateAccuracy(); // Show final accuracy
+                finalScoreDisplay.textContent = score; // Show final score
+                gameOverScreen.style.display = 'flex'; // Show the regular game over screen
+                apexPredatorScreen.style.display = 'none'; // Ensure apex screen is hidden
+            }
+            // --- END: Apex Predator Check ---
         }
 
+        // Decrements the timer and updates the HUD each second; ends game if timer reaches 0
         function tick() { timer--; updateHUD(); if (timer <= 0) endGame(); }
 
+        // Spawns a single emoji at a random location with random properties
         function spawnEmoji() {
-            if (isGameOver) return;
+            if (isGameOver) return; // Don't spawn if game is over
+
+            // Create the emoji element
             const emojiElement = document.createElement('div');
             emojiElement.classList.add('emoji');
             let points = 1; let emojiChar = ''; let isGolden = false; let isHider = false; let isInsect = false;
+
+            // Determine emoji type: Golden Crown, Insect, or Regular Animal
             if (Math.random() < GOLDEN_CROWN_CHANCE) {
-                emojiChar = goldenCrownEmoji; emojiElement.classList.add('golden-crown');
-                points = 5; isGolden = true; emojiElement.style.fontSize = '45px';
+                // Golden Crown
+                emojiChar = goldenCrownEmoji;
+                emojiElement.classList.add('golden-crown');
+                points = 5; // Worth more points
+                isGolden = true;
+                emojiElement.style.fontSize = '45px'; // Make it slightly larger
             } else {
+                // Regular Animal or Insect
                 emojiChar = getRandomElement(animalEmojis);
-                isInsect = insectEmojis.includes(emojiChar);
+                isInsect = insectEmojis.includes(emojiChar); // Check if it's an insect
                 if (isInsect) {
-                     points = -10;
-                     emojiElement.style.fontSize = `${getRandomInt(30, 45)}px`;
+                     // Insect specific properties
+                     points = -10; // Used for score reset logic, not actual points added
+                     emojiElement.style.fontSize = `${getRandomInt(30, 45)}px`; // Slightly smaller range
                      emojiElement.classList.add('insect');
                  } else {
+                     // Regular animal properties
                      points = 1;
-                     emojiElement.style.fontSize = `${getRandomInt(35, 55)}px`;
+                     emojiElement.style.fontSize = `${getRandomInt(35, 55)}px`; // Standard size range
                  }
+                 // Apply random movement behavior and idle animation (only if not golden)
                  if (!isGolden) {
                     const behavior = getRandomElement(emojiBehaviors);
-                    if (behavior !== 'normal') { emojiElement.classList.add(`behavior-${behavior}`); if (behavior === 'hider') isHider = true; }
+                    if (behavior !== 'normal') {
+                        emojiElement.classList.add(`behavior-${behavior}`);
+                        if (behavior === 'hider') isHider = true; // Flag hider behavior
+                    }
+                    // Apply idle animation only if it's not a fast mover or jumper (looks weird)
                     if (behavior !== 'fast' && behavior !== 'jumper') {
                         const animation = getRandomElement(idleAnimations);
-                        if (animation !== 'none') { emojiElement.classList.add(`animation-${animation}`); emojiElement.style.animationDelay = `${Math.random() * 0.5}s`; }
+                        if (animation !== 'none') {
+                            emojiElement.classList.add(`animation-${animation}`);
+                            emojiElement.style.animationDelay = `${Math.random() * 0.5}s`; // Stagger idle animations
+                        }
                     }
                 }
             }
-            emojiElement.textContent = emojiChar; emojiElement.dataset.points = points; emojiElement.dataset.isInsect = isInsect;
+
+            // Set emoji content and store data attributes
+            emojiElement.textContent = emojiChar;
+            emojiElement.dataset.points = points; // Store points value
+            emojiElement.dataset.isInsect = isInsect; // Store whether it's an insect
+
+            // Calculate random position within the game bounds, avoiding the HUD area
             const gameRect = gameContainer.getBoundingClientRect();
-            const maxX = gameRect.width - 70; const maxY = gameRect.height - 70;
-            emojiElement.style.left = `${getRandomInt(10, maxX)}px`; emojiElement.style.top = `${getRandomInt(TOP_SAFE_ZONE, maxY)}px`;
+            const maxX = gameRect.width - 70; // Max X, accounting for emoji size/padding
+            const maxY = gameRect.height - 70; // Max Y, accounting for emoji size/padding
+            emojiElement.style.left = `${getRandomInt(10, maxX)}px`; // Random horizontal position
+            emojiElement.style.top = `${getRandomInt(TOP_SAFE_ZONE, maxY)}px`; // Random vertical position below safe zone
+
+            // Add the click/tap event listener
             emojiElement.addEventListener('pointerdown', handleEmojiClick);
-            gameContainer.appendChild(emojiElement); activeEmojis.add(emojiElement);
-            if (isHider) { setTimeout(() => { if (activeEmojis.has(emojiElement)) { emojiElement.style.opacity = '0'; setTimeout(() => { if (activeEmojis.has(emojiElement)) { activeEmojis.delete(emojiElement); emojiElement.remove(); } }, 300); } }, HIDER_DESPAWN_TIME); }
-        }
 
-        function handleEmojiClick(event) {
-            event.stopPropagation(); if (isGameOver) return;
-            const clickedEmoji = event.target.closest('.emoji');
-            if (!clickedEmoji || !activeEmojis.has(clickedEmoji)) return;
-            const points = parseInt(clickedEmoji.dataset.points, 10);
-            const isInsect = clickedEmoji.dataset.isInsect === 'true';
-            totalClicks++;
-            const rect = clickedEmoji.getBoundingClientRect();
-            const clickX = rect.left + rect.width / 2; const clickY = rect.top + rect.height / 2;
-            if (isInsect) {
-                 score = 0;
-                 insectsSquished++; triggerInsectFlash(); createFeedback('insect', clickX, clickY, "RESET!");
-            } else {
-                score += points; animalsSquished++; createFeedback('hit', clickX, clickY, `+${points}`);
+            // Add the emoji to the game container and the active set
+            gameContainer.appendChild(emojiElement);
+            activeEmojis.add(emojiElement);
+            totalSpawnedCreatures++; // Increment total spawned count
+
+            // Special logic for 'hider' behavior: schedule its disappearance
+            if (isHider) {
+                setTimeout(() => {
+                    // Check if the emoji still exists (wasn't squished)
+                    if (activeEmojis.has(emojiElement)) {
+                        emojiElement.style.opacity = '0'; // Start fading out
+                        // Remove from DOM and set after fade animation completes
+                        setTimeout(() => {
+                            if (activeEmojis.has(emojiElement)) { // Double check it wasn't squished during fade
+                                activeEmojis.delete(emojiElement);
+                                emojiElement.remove();
+                                // Note: Hiders that despawn naturally don't count towards squished totals
+                            }
+                        }, 300); // Wait for CSS transition duration
+                    }
+                }, HIDER_DESPAWN_TIME);
             }
-            clickedEmoji.classList.add('squished'); clickedEmoji.style.pointerEvents = 'none';
-            activeEmojis.delete(clickedEmoji); setTimeout(() => clickedEmoji.remove(), 50);
-            updateHUD();
         }
 
+        // Handles clicks/taps directly on an emoji
+        function handleEmojiClick(event) {
+            event.stopPropagation(); // Prevent this click from triggering handleMiss on the container
+            if (isGameOver) return; // Ignore clicks if game is over
+
+            const clickedEmoji = event.target.closest('.emoji'); // Get the emoji element clicked
+            // Ensure it's a valid, active emoji that hasn't already been squished
+            if (!clickedEmoji || !activeEmojis.has(clickedEmoji)) return;
+
+            const points = parseInt(clickedEmoji.dataset.points, 10); // Get points from data attribute
+            const isInsect = clickedEmoji.dataset.isInsect === 'true'; // Check if insect from data attribute
+            totalClicks++; // Increment total clicks for accuracy calculation
+
+            // Get click coordinates for feedback effects
+            const clickX = event.clientX;
+            const clickY = event.clientY;
+
+            // Process the click based on whether it was an insect or not
+            if (isInsect) {
+                 score = 0; // Reset score to 0!
+                 insectsSquished++; // Increment insect squish counter
+                 triggerInsectFlash(); // Flash the background red
+                 createFeedback('insect', clickX, clickY, "RESET!"); // Show "RESET!" feedback
+             } else {
+                 score += points; // Add points (1 for regular, 5 for golden)
+                 animalsSquished++; // Increment animal squish counter
+                 createFeedback('hit', clickX, clickY, `+${points}`); // Show score gain feedback
+             }
+
+            // Apply squished effect, make unclickable, remove from active set, and schedule removal from DOM
+            clickedEmoji.classList.add('squished'); // Add class for visual squish effect
+            clickedEmoji.style.pointerEvents = 'none'; // Prevent further clicks on this emoji
+            activeEmojis.delete(clickedEmoji); // Remove from the active set
+            setTimeout(() => clickedEmoji.remove(), 50); // Remove from DOM shortly after squish animation starts
+
+            updateHUD(); // Update the score and accuracy display
+        }
+
+        // Handles clicks/taps on the game background (not on an emoji)
         function handleMiss(event) {
+            // Ignore if the click was actually on an emoji (handled by handleEmojiClick)
             if (event.target.closest('.emoji') && activeEmojis.has(event.target.closest('.emoji'))) return;
-            if (isGameOver) return; if (event.target.closest('#hud') || event.target.closest('.screen')) return;
-            misses++; totalClicks++; score = Math.max(0, score - MISS_PENALTY);
-            createFeedback('miss', event.clientX, event.clientY, `-${MISS_PENALTY}`);
-            updateHUD();
+            // Ignore clicks if game is over or if clicking on HUD/Screens
+            if (isGameOver) return;
+            if (event.target.closest('#hud') || event.target.closest('.screen')) return;
+
+            // Process the miss
+            misses++; totalClicks++;
+            score = Math.max(0, score - MISS_PENALTY); // Decrease score (minimum 0)
+            createFeedback('miss', event.clientX, event.clientY, `-${MISS_PENALTY}`); // Show penalty feedback
+            updateHUD(); // Update score and accuracy display
         }
 
         // --- Initialization ---
+        // Add event listeners to the start and play again buttons
         startButton.addEventListener('click', startGame);
         playAgainButton.addEventListener('click', startGame);
-        window.addEventListener('load', () => { loadHighScore(); startScreen.style.display = 'flex'; gameOverScreen.style.display = 'none'; hud.style.display = 'none'; gameContainer.style.backgroundColor = '#000000'; });
+        apexPlayAgainButton.addEventListener('click', startGame); // Listener for apex screen button
+
+        // Initial setup when the page finishes loading
+        window.addEventListener('load', () => {
+            loadHighScore(); // Load the saved high score
+            // Set initial screen visibility
+            startScreen.style.display = 'flex';
+            gameOverScreen.style.display = 'none';
+            apexPredatorScreen.style.display = 'none';
+            hud.style.display = 'none';
+            gameContainer.style.backgroundColor = '#000000'; // Ensure initial black background before game starts
+        });
 
     </script>
 
 </body>
 </html>
+
+<!--
+    This HTML file is a simple game called "Squish Party" where players tap on animals to score points while avoiding insects that reset their score. 
+    The game features a retro pixelated style, responsive design, and various animations for emojis and feedback effects.
+    The game also includes a high score feature and an "Apex Predator" screen for players who squish all creatures.
+    The game is designed to be played on both desktop and mobile devices, with touch and pointer events for interaction.
+    The game logic is implemented in JavaScript, with functions for spawning emojis, handling clicks, and managing game state.
+    The game uses CSS for styling, including animations, transitions, and responsive adjustments for different screen sizes.
+    The game is designed to be fun and engaging, with a focus on quick reflexes and accuracy.
+    The game is a simple yet entertaining way to practice hand-eye coordination and reaction time.
+    The game is a fun and engaging way to practice hand-eye coordination and reaction time.
+    The game is a simple yet entertaining way to practice hand-eye coordination and reaction time.
+
+
